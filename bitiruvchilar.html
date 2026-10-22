@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Bitiruvchilar — Uyg'un ta'lim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root { --krem:#FBF7EE; --oltin:#B8912F; --oltin-och:#DCC27A; --kok:#241A72; --matn:#2B2A26; --kulrang:#5F5A50; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--krem); color:var(--matn); font-family:Inter,system-ui,sans-serif; display:flex; flex-direction:column; min-height:100vh; }
+  main { flex:1; width:100%; max-width:820px; margin:0 auto; padding:32px 16px 48px; }
+  .logo { display:block; width:220px; max-width:65%; margin:0 auto 10px; }
+  .tashkilot { text-align:center; font-size:11px; letter-spacing:0.14em; color:var(--kulrang); margin-bottom:26px; }
+  h1 { font-family:'Cormorant Garamond',Georgia,serif; font-size:30px; font-weight:600; letter-spacing:0.06em; color:var(--kok); text-align:center; margin:0 0 6px; }
+  .son { text-align:center; font-size:14px; color:var(--kulrang); margin:0 0 24px; }
+  .son b { color:var(--kok); font-size:17px; }
+
+  .qidiruv { display:flex; gap:10px; margin-bottom:20px; }
+  input { flex:1; height:48px; padding:0 14px; font-size:16px; font-family:inherit; color:var(--matn); background:#fff; border:1px solid var(--oltin-och); border-radius:10px; }
+  input:focus { outline:2px solid var(--kok); outline-offset:1px; }
+  button { height:48px; padding:0 20px; border:none; border-radius:10px; background:var(--kok); color:#fff; font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover { background:#1a1356; }
+  button[disabled] { opacity:.6; cursor:default; }
+
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--oltin-och); border-radius:12px; overflow:hidden; }
+  th, td { text-align:left; padding:12px 14px; font-size:14px; border-bottom:1px solid #EDE6D4; }
+  th { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--kulrang); background:#FBF7EE; }
+  tr:last-child td { border-bottom:none; }
+  td.fio { font-weight:600; }
+  td.raqam { font-family:'Courier New',monospace; color:var(--kok); white-space:nowrap; }
+  .holat { text-align:center; padding:22px; color:var(--kulrang); font-size:14px; }
+  .yana { margin:18px auto 0; display:block; background:transparent; color:var(--kok); border:1px solid var(--kok); }
+  .jadval-quti { overflow-x:auto; }
+
+  footer { border-top:1px solid var(--oltin-och); padding:20px 16px 28px; text-align:center; font-size:12px; color:var(--kulrang); line-height:1.8; }
+  footer a { color:var(--kok); }
+  /* Tor ekranda "Fan" ustuni yashiriladi — F.I.Sh. va raqam muhimroq */
+  @media (max-width:520px) { th:nth-child(2), td:nth-child(2) { display:none; } }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.svg" alt="Uyg'un ta'lim">
+  <div class="tashkilot">«UYG'UN TA'LIM» MCHJ</div>
+
+  <h1>Bitiruvchilar</h1>
+  <p class="son" id="son">&nbsp;</p>
+
+  <form class="qidiruv" id="qidiruvShakl" autocomplete="off">
+    <input id="q" placeholder="Familiya yoki sertifikat raqami" aria-label="Qidirish">
+    <button type="submit">Qidirish</button>
+  </form>
+
+  <div class="jadval-quti">
+    <table>
+      <thead>
+        <tr><th>F.I.Sh.</th><th>Fan</th><th>Sertifikat raqami</th><th>Yil</th></tr>
+      </thead>
+      <tbody id="tana">
+        <tr><td colspan="4" class="holat">Yuklanmoqda…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <button class="yana" id="yana" hidden>Ko'proq ko'rsatish</button>
+</main>
+
+<footer>
+  «UYG'UN TA'LIM» MCHJ · <a href="index.html">Sertifikatni tekshirish</a><br>
+  Ro'yxatda faqat e'lon qilinishiga rozilik bergan bitiruvchilar ko'rsatiladi.<br>
+  Ro'yxatdan chiqarish uchun: <a href="mailto:qobiliy.isaev@gmail.com">qobiliy.isaev@gmail.com</a>
+</footer>
+
+<script>
+const SUPABASE_URL = "https://bwiqzxagqztahqncmebn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_wgpaMl8Uk_-E4TvQTJkfPQ_U2IoCj43";
+const SAHIFA = 25;
+
+const tana = document.getElementById("tana");
+const yanaTugma = document.getElementById("yana");
+let ofset = 0, joriyQidiruv = "";
+
+function xavfsiz(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]
+  ));
+}
+
+async function sonniOl() {
+  try {
+    const j = await fetch(SUPABASE_URL + "/rest/v1/rpc/bitiruvchilar_soni", {
+      method: "POST",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" },
+      body: "{}"
+    });
+    if (!j.ok) return;
+    const n = await j.json();
+    document.getElementById("son").innerHTML = "Jami <b>" + Number(n) + "</b> nafar bitiruvchi";
+  } catch (e) { /* jim */ }
+}
+
+async function yukla(qoshish) {
+  yanaTugma.disabled = true;
+  let url = SUPABASE_URL + "/rest/v1/bitiruvchilar?select=raqam,fio,fan,yil"
+          + "&order=sana.desc&limit=" + SAHIFA + "&offset=" + ofset;
+  if (joriyQidiruv) {
+    const q = encodeURIComponent("*" + joriyQidiruv + "*");
+    url += "&or=(fio.ilike." + q + ",raqam.ilike." + q + ")";
+  }
+  try {
+    const javob = await fetch(url, { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } });
+    if (!javob.ok) throw new Error("HTTP " + javob.status);
+    const qatorlar = await javob.json();
+
+    if (!qoshish) tana.innerHTML = "";
+    if (!qatorlar.length && !qoshish) {
+      tana.innerHTML = '<tr><td colspan="4" class="holat">Hech narsa topilmadi.</td></tr>';
+      yanaTugma.hidden = true;
+      return;
+    }
+    for (const r of qatorlar) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = '<td class="fio">' + xavfsiz(r.fio) + '</td>'
+                   + '<td>' + xavfsiz(r.fan) + '</td>'
+                   + '<td class="raqam">' + xavfsiz(r.raqam) + '</td>'
+                   + '<td>' + xavfsiz(r.yil) + '</td>';
+      tana.appendChild(tr);
+    }
+    ofset += qatorlar.length;
+    yanaTugma.hidden = qatorlar.length < SAHIFA;
+  } catch (e) {
+    if (!qoshish) tana.innerHTML = '<tr><td colspan="4" class="holat">Ma’lumotni olishda xatolik. Qaytadan urinib ko‘ring.</td></tr>';
+  } finally {
+    yanaTugma.disabled = false;
+  }
+}
+
+document.getElementById("qidiruvShakl").addEventListener("submit", e => {
+  e.preventDefault();
+  joriyQidiruv = document.getElementById("q").value.trim();
+  ofset = 0;
+  tana.innerHTML = '<tr><td colspan="4" class="holat">Yuklanmoqda…</td></tr>';
+  yukla(false);
+});
+yanaTugma.addEventListener("click", () => yukla(true));
+
+sonniOl();
+yukla(false);
+</script>
+</body>
+</html>
